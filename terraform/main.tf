@@ -1,3 +1,11 @@
+# 0. cloudrun-repo という名前のArtifact Registryリポジトリを作成
+resource "google_artifact_registry_repository" "repo" {
+  provider      = google-beta
+  location      = "asia-northeast1"
+  repository_id = "cloudrun-repo"
+  format        = "DOCKER"
+}
+
 # 1. Cloud Runサービスの定義（Nginxコンテナのデプロイ ＋ IAP有効化）
 resource "google_cloud_run_v2_service" "default" {
   provider     = google-beta
