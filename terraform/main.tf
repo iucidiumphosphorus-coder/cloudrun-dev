@@ -1,4 +1,4 @@
-# 0. コンテナイメージを保存するArtifact Registryの作成
+# 0. コンテナイメージを保存するArtifactRegistryの作成
 resource "google_artifact_registry_repository" "repo" {
   provider      = google-beta
   location      = "asia-northeast1"
