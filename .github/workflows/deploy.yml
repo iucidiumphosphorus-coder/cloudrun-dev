@@ -23,7 +23,7 @@ jobs:
           workload_identity_provider: 'projects/1047664134161/locations/global/workloadIdentityPools/github-pool-v2/providers/github-provider'
           service_account: 'github-actions-sa@bigquery-s3-cloudrun.iam.gserviceaccount.com'
 
-      # 1. 先にTerraformを適用してArtifact RegistryリポジトリやCloud Runの枠組みを作る
+      # 1. Terraform実行（最初は安全なダミーイメージでCloud Runの箱を作る）
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -39,7 +39,7 @@ jobs:
             -var="region=asia-northeast1" \
             -var='allowed_user_email=["suzushika.yuki3@gmail.com", "iucidium.phosphorus@gmail.com"]'
 
-      # 2. リポジトリが確実に存在するのでDocker認証・プッシュが成功する
+      # 2. リポジトリができたのでDockerビルド・プッシュを行う
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev --quiet
 
@@ -48,3 +48,10 @@ jobs:
           IMAGE_BASE="asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app"
           docker build -t $IMAGE_BASE:${{ github.sha }} -t $IMAGE_BASE:latest .
           docker push --all-tags $IMAGE_BASE
+
+      # 3. 最後に自作イメージでCloud Runのリビジョンを最新化する
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run services update corporate-web-service \
+            --image=asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app:${{ github.sha }} \
+            --region=asia-northeast1
