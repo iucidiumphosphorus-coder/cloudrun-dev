@@ -15,6 +15,8 @@ resource "google_cloud_run_v2_service" "default" {
   launch_stage = "BETA"
   iap_enabled  = true
 
+  deletion_protection = false
+
   template {
     containers {
       image = "asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app:latest"
