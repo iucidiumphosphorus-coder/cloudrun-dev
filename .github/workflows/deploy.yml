@@ -21,7 +21,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 1. キーレス認証（GCPとOIDC）
+      # 1. GCP認証
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v3
@@ -29,22 +29,13 @@ jobs:
           workload_identity_provider: 'projects/1047664134161/locations/global/workloadIdentityPools/github-pool-v2/providers/github-provider'
           service_account: 'github-actions-sa@bigquery-s3-cloudrun.iam.gserviceaccount.com'
 
-      # 2. Terraformのセットアップと適用（Artifact Registryリポジトリなどを先に作成）
+      # 2. Terraform初期化
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
         working-directory: terraform
         run: terraform init
-
-      - name: Terraform Apply (インフラ作成)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: terraform
-        run: |
-          terraform apply -auto-approve \
-            -var="project_id=bigquery-s3-cloudrun" \
-            -var="region=asia-northeast1" \
-            -var='allowed_user_email=["suzushika.yuki3@gmail.com", "iucidium.phosphorus@gmail.com"]'
 
       # 3. DockerをGCP (Artifact Registry) にログインさせる
       - name: Authenticate Docker to Artifact Registry
