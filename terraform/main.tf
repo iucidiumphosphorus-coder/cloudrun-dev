@@ -1,15 +1,14 @@
 resource "google_artifact_registry_repository" "repo" {
   provider      = google-beta
-  location      = "asia-northeast1"
+  location      = var.region
   repository_id = "cloudrun-repo"
   format        = "DOCKER"
 }
 
-# 1. Cloud Runサービスの定義
 resource "google_cloud_run_v2_service" "default" {
   provider     = google-beta
   name         = "corporate-web-service"
-  location     = "asia-northeast1"
+  location     = var.region
   ingress      = "INGRESS_TRAFFIC_ALL"
   launch_stage = "BETA"
   iap_enabled  = true
@@ -18,11 +17,10 @@ resource "google_cloud_run_v2_service" "default" {
 
   template {
     containers {
-      image = "asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app:latest"
+      image = var.container_image
     }
   }
 
-  # ★ここを追加：Terraform以外（GitHub Actionsなど）がイメージを更新しても差分検出させない
   lifecycle {
     ignore_changes = [
       template[0].containers[0].image,
@@ -30,7 +28,6 @@ resource "google_cloud_run_v2_service" "default" {
   }
 }
 
-# 2. IAPサービスエージェントにCloud Runの実行権限を付与
 resource "google_cloud_run_v2_service_iam_member" "iap_invoker" {
   provider = google-beta
   project  = google_cloud_run_v2_service.default.project
@@ -40,7 +37,6 @@ resource "google_cloud_run_v2_service_iam_member" "iap_invoker" {
   member   = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-iap.iam.gserviceaccount.com"
 }
 
-# 3. アクセスを許可する特定の人間（複数人）に権限を一括付与
 resource "google_cloud_run_v2_service_iam_member" "user_access" {
   for_each = toset(var.allowed_user_email)
 
@@ -53,5 +49,5 @@ resource "google_cloud_run_v2_service_iam_member" "user_access" {
 }
 
 data "google_project" "project" {
-  project_id = "bigquery-s3-cloudrun"
+  project_id = var.project_id
 }
