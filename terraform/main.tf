@@ -1,11 +1,3 @@
-# 0. コンテナイメージを保存するArtifactRegistryの作成
-resource "google_artifact_registry_repository" "repo" {
-  provider      = google-beta
-  location      = "asia-northeast1"
-  repository_id = "cloudrun-repo"
-  format        = "DOCKER"
-}
-
 # 1. Cloud Runサービスの定義（Nginxコンテナのデプロイ ＋ IAP有効化）
 resource "google_cloud_run_v2_service" "default" {
   provider     = google-beta
@@ -22,8 +14,6 @@ resource "google_cloud_run_v2_service" "default" {
       image = "asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app:latest"
     }
   }
-
-  depends_on = [google_artifact_registry_repository.repo]
 }
 
 # 2. IAPサービスエージェントにCloud Runの実行権限を付与
