@@ -37,12 +37,13 @@ jobs:
         working-directory: terraform
         run: terraform init
 
-      # 3. まずTerraformでArtifact Registryなどのベースインフラを作成する
+      # 3. まずTerraformでArtifact Registryだけを先に作成する
       - name: Terraform Apply (Base Infra)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: terraform
         run: |
           terraform apply -auto-approve \
+            -target=google_artifact_registry_repository.repo \
             -var="project_id=bigquery-s3-cloudrun" \
             -var="region=asia-northeast1" \
             -var='allowed_user_email=["suzushika.yuki3@gmail.com", "iucidium.phosphorus@gmail.com"]'
