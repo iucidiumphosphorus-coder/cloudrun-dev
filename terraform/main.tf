@@ -1,4 +1,3 @@
-# 0. cloudrun-repo という名前のArtifact Registryリポジトリを作成
 resource "google_artifact_registry_repository" "repo" {
   provider      = google-beta
   location      = "asia-northeast1"
@@ -6,7 +5,7 @@ resource "google_artifact_registry_repository" "repo" {
   format        = "DOCKER"
 }
 
-# 1. Cloud Runサービスの定義（Nginxコンテナのデプロイ ＋ IAP有効化）
+# 1. Cloud Runサービスの定義
 resource "google_cloud_run_v2_service" "default" {
   provider     = google-beta
   name         = "corporate-web-service"
@@ -22,6 +21,13 @@ resource "google_cloud_run_v2_service" "default" {
       image = "asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app:latest"
     }
   }
+
+  # ★ここを追加：Terraform以外（GitHub Actionsなど）がイメージを更新しても差分検出させない
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+    ]
+  }
 }
 
 # 2. IAPサービスエージェントにCloud Runの実行権限を付与
@@ -34,7 +40,7 @@ resource "google_cloud_run_v2_service_iam_member" "iap_invoker" {
   member   = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-iap.iam.gserviceaccount.com"
 }
 
-# 3. アクセスを許可する特定の人間（複数人）に「閲覧権限」を一括付与
+# 3. アクセスを許可する特定の人間（複数人）に権限を一括付与
 resource "google_cloud_run_v2_service_iam_member" "user_access" {
   for_each = toset(var.allowed_user_email)
 
