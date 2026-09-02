@@ -29,7 +29,7 @@ jobs:
           workload_identity_provider: 'projects/1047664134161/locations/global/workloadIdentityPools/github-pool-v2/providers/github-provider'
           service_account: 'github-actions-sa@bigquery-s3-cloudrun.iam.gserviceaccount.com'
 
-      # 2. Terraformのセットアップと適用（先にインフラ＝Artifact Registryを作成）
+      # 2. Terraformのセットアップと適用（Artifact Registryリポジトリなどを先に作成）
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -37,7 +37,7 @@ jobs:
         working-directory: terraform
         run: terraform init
 
-      - name: Terraform Apply
+      - name: Terraform Apply (インフラ作成)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: terraform
         run: |
@@ -46,7 +46,7 @@ jobs:
             -var="region=asia-northeast1" \
             -var='allowed_user_email=["suzushika.yuki3@gmail.com", "iucidium.phosphorus@gmail.com"]'
 
-      # 3. DockerをGCP (Artifact Registry) にログインさせる（公式専用アクション）
+      # 3. DockerをGCP (Artifact Registry) にログインさせる
       - name: Authenticate Docker to Artifact Registry
         uses: docker/login-action@v3
         with:
@@ -54,9 +54,20 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.auth_token }}
 
-      # 4. Dockerイメージのビルド＆プッシュ（ルートディレクトリで実行）
+      # 4. Dockerイメージのビルド＆プッシュ（インフラ作成後に行う）
       - name: Build and Push Docker Container
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           IMAGE_BASE="asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app"
           docker build -t $IMAGE_BASE:${{ github.sha }} -t $IMAGE_BASE:latest .
           docker push --all-tags asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app
+
+      # 5. イメージがプッシュされた後にもう一度 Terraform Apply を走らせる（またはCloud Runに最新イメージを反映させる）
+      - name: Terraform Apply (Cloud Runにイメージをデプロイ)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve \
+            -var="project_id=bigquery-s3-cloudrun" \
+            -var="region=asia-northeast1" \
+            -var='allowed_user_email=["suzushika.yuki3@gmail.com", "iucidium.phosphorus@gmail.com"]'
