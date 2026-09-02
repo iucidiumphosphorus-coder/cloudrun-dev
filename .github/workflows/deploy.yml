@@ -48,7 +48,7 @@ jobs:
             -var="region=asia-northeast1" \
             -var='allowed_user_email=["suzushika.yuki3@gmail.com", "iucidium.phosphorus@gmail.com"]'
 
-      # 4. DockerをGCP (Artifact Registry) にログインさせる
+      # 4. リポジトリが作成された“後”にDockerログインを行う
       - name: Authenticate Docker to Artifact Registry
         uses: docker/login-action@v3
         with:
@@ -56,7 +56,7 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.auth_token }}
 
-      # 5. Dockerイメージのビルド＆プッシュ（レポジトリが確実に存在した後に実行）
+      # 5. Dockerイメージのビルド＆プッシュ
       - name: Build and Push Docker Container
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
@@ -64,12 +64,15 @@ jobs:
           docker build -t $IMAGE_BASE:${{ github.sha }} -t $IMAGE_BASE:latest .
           docker push --all-tags asia-northeast1-docker.pkg.dev/bigquery-s3-cloudrun/cloudrun-repo/my-web-app
 
-      # 6. イメージがプッシュされた状態で、Cloud Runを含めてもう一度適用する
+      # 6. Cloud Runを含めて全体をデプロイ
       - name: Terraform Apply (Cloud Run Deploy)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: terraform
         run: |
           terraform apply -auto-approve \
+            -var="project_id=bigquery-s3-cloudrun" \
+            -var="region=asia-northeast1" \
+            -var='allowed_user_email=["suzushika.yuki3@gmail.com", "iucidium.phosphorus@gmail.com"]'
             -var="project_id=bigquery-s3-cloudrun" \
             -var="region=asia-northeast1" \
             -var='allowed_user_email=["suzushika.yuki3@gmail.com", "iucidium.phosphorus@gmail.com"]'
